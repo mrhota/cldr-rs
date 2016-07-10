@@ -1,20 +1,18 @@
-#![allow(dead_code)]
-#![allow(unused_imports)]
-#![allow(unused_variables)]
-
 use std::path::Path;
-use std::fs::File;
+use std::path::PathBuf;
+use std::fs;
 use std::io;
-use std::io::Read;
 use std::result::Result;
+use std::env;
+use std::process;
 
 extern crate git2;
 use git2::Repository;
+use git2::Error as GitError;
 
-extern crate serde;
-extern crate serde_json as json;
-use json::Value;
-use json::value::to_value;
+extern crate bzip2;
+use bzip2::write::BzEncoder;
+use bzip2::Compression;
 
 // For more information on the structure of the repos defined here, see
 // https://github.com/unicode-cldr/cldr-json#package-organization
@@ -54,7 +52,7 @@ const JAPANESE: &'static str = "cal-japanese";
 const PERSIAN: &'static str = "cal-persian";
 const ROC: &'static str = "cal-roc";
 
-fn build_url_list() -> Vec<(String, &'static str)> {
+fn get_url_list() -> Vec<(String, &'static str)> {
     vec![
         (format!("{}-{}", URL_PREFIX, CORE), CORE),
         (format!("{}-{}-{}", URL_PREFIX, DATES, PACKAGE), DATES),
@@ -67,32 +65,93 @@ fn build_url_list() -> Vec<(String, &'static str)> {
     ]
 }
 
-fn clone_repos() {
+fn clone_repos() -> Result<(), GitError> {
     let json_path = Path::new("data/json");
-    for (url, dir) in build_url_list() {
+    let tag = tag_name();
+    for (url, dir) in get_url_list() {
         if json_path.join(dir).exists() {
             continue;
         }
-        println!("Cloning {}", url);
-        let repo = match Repository::clone(url.as_ref(), json_path.join(dir)) {
-            Ok(r) => r,
-            Err(e) => panic!("couldn't clone repo: {}", e),
-        };
+        let repo = try!(Repository::clone(url.as_ref(), json_path.join(dir)));
+        let ref_id = try!(repo.refname_to_id(tag.as_str()));
+        try!(repo.set_head_detached(ref_id));
     }
+    Ok(())
 }
 
-fn deserialize_json(p: &Path) -> Result<Value, io::Error> {
-    let mut f = try!(File::open(p));
-    let mut contents = String::new();
-    try!(f.read_to_string(&mut contents));
-    Ok(json::from_str(&contents).expect("couldn't deserialize to the provided type"))
+fn tag_name() -> String {
+    format!("refs/tags/{}.{}.{}",
+            env::var("CARGO_PKG_VERSION_MAJOR").unwrap(),
+            env::var("CARGO_PKG_VERSION_MINOR").unwrap(),
+            env::var("CARGO_PKG_VERSION_PATCH").unwrap())
+}
+
+fn cleanup_json() {
+    fs::remove_dir_all("./data/json").unwrap();
+}
+
+fn visit_dirs<F>(dir: &Path, cb: &F) -> io::Result<()>
+    where F : Fn(&fs::DirEntry) -> io::Result<()> {
+
+    if dir.is_dir() {
+        for entry in try!(dir.read_dir()) {
+            let entry = try!(entry);
+            if entry.path().is_dir() {
+                try!(visit_dirs(&entry.path(), cb));
+            } else {
+                try!(cb(&entry));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn json_compressor(entry: &fs::DirEntry) -> io::Result<()> {
+    let entry_name = &entry.file_name();
+    if is_json(&entry.path()) && !("bower.json" == entry_name || "package.json" == entry_name) {
+        try!(compress(&entry.path()));
+    }
+    Ok(())
+}
+
+fn is_json(p: &Path) -> bool {
+    if let Some(ex) = p.extension() {
+        return ex == "json"
+    }
+    false
+}
+
+fn get_new_path(p: &Path) -> io::Result<PathBuf> {
+    let p = match p.strip_prefix("data/json") {
+        Ok(_p) => Path::new("data/").join(_p).with_extension("json.bz2"),
+        Err(_) => p.to_path_buf()
+    };
+    if !p.exists() {
+        try!(fs::create_dir_all(p.parent().unwrap()));
+    }
+    Ok(p)
+}
+
+fn compress(p: &Path) -> io::Result<()> {
+    let new_path = try!(get_new_path(p));
+    let mut old_file = try!(fs::File::open(&p));
+    let new_file = try!(fs::File::create(&new_path));
+    let mut zipper = BzEncoder::new(new_file, Compression::Best);
+    try!(io::copy(&mut old_file, &mut zipper));
+    Ok(())
 }
 
 fn main() {
-    clone_repos();
-    let core = Path::new("data/json/core");
-    let available_locales = core.join("availableLocales.json");
-    let default_content = core.join("defaultContent.json");
-    let script_metadata = core.join("scriptMetadata.json");
-    let dc_map: Value = deserialize_json(&available_locales).unwrap();
+    if let Err(e) = clone_repos() {
+        println!("Problem with CLDR repos: {}", e);
+        println!("Cleaning up and exiting.");
+        cleanup_json();
+        process::exit(1);
+    }
+    if let Err(e) = visit_dirs(Path::new("data/json"), &json_compressor) {
+        println!("Some problem: {}", e);
+        cleanup_json();
+        process::exit(1);
+    }
+    cleanup_json();
 }
