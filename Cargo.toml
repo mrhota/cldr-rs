@@ -1,0 +1,67 @@
+[package]
+name = "cldr"
+version = "29.0.0-alpha"
+authors = ["A.J. Gardner <aaron.j.gardner@gmail.com>"]
+license = "Unlicense"
+keywords = ["cldr", "unicode", "language", "bcp47", "locale", "i18n", "l10n", "ldml"]
+build = "build.rs"
+description = """
+cldr provides raw data and a thin wrapper around Unicode's Common
+Language Data Repository (CLDR).
+"""
+
+[build-dependencies]
+bzip2 = "0.3.0"
+git2 = "0.4.3"
+
+[dependencies]
+serde = "0.7.11"
+serde_json = "0.7.3"
+bzip2 = { version = "0.3.0", optional = true }
+
+[features]
+default = ["all-modern", "compress"]
+# choose modern or full, but not both
+all-modern = ["modern", "core", "dates", "localenames", "misc", "rbnf", "segments", "units"]
+all-full = ["full", "core", "dates", "localenames", "misc", "rbnf", "segments", "units"]
+all-calendars = [
+    # "dates" includes gregorian data
+    "dates",
+    "bud",
+    "chi",
+    "cop",
+    "dan",
+    "eth",
+    "heb",
+    "ind",
+    "isl",
+    "jap",
+    "per",
+    "roc"
+]
+
+modern = []
+full = []
+
+compress = ["bzip2"]
+
+core = []
+dates = ["numbers"]
+localenames = []
+misc = []
+numbers = []
+rbnf = []
+segments = []
+units = []
+
+bud = []
+chi = []
+cop = []
+dan = []
+eth = []
+heb = []
+ind = []
+isl = []
+jap = []
+per = []
+roc = []
