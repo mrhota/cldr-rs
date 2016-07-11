@@ -134,6 +134,9 @@ fn get_new_path(p: &Path) -> io::Result<PathBuf> {
 
 fn compress(p: &Path) -> io::Result<()> {
     let new_path = try!(get_new_path(p));
+    if new_path.exists() {
+        return Ok(())
+    }
     let mut old_file = try!(fs::File::open(&p));
     let new_file = try!(fs::File::create(&new_path));
     let mut zipper = BzEncoder::new(new_file, Compression::Best);
