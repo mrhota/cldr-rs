@@ -5,7 +5,7 @@ homepage = "https://github.com/mrhota/cldr-rs"
 version = "29.0.0-alpha"
 authors = ["A.J. Gardner <aaron.j.gardner@gmail.com>"]
 license = "Unlicense"
-keywords = ["cldr", "unicode", "language", "bcp47", "locale", "i18n", "l10n", "ldml"]
+keywords = ["cldr", "unicode", "l10n", "locale", "i18n"]
 build = "build.rs"
 description = """
 cldr provides raw data and a thin wrapper around Unicode's Common
