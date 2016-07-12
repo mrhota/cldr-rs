@@ -81,13 +81,13 @@ fn clone_repos() -> Result<(), GitError> {
 
 fn tag_name() -> String {
     format!("refs/tags/{}.{}.{}",
-            env::var("CARGO_PKG_VERSION_MAJOR").unwrap(),
-            env::var("CARGO_PKG_VERSION_MINOR").unwrap(),
-            env::var("CARGO_PKG_VERSION_PATCH").unwrap())
+            env!("CARGO_PKG_VERSION_MAJOR"),
+            env!("CARGO_PKG_VERSION_MINOR"),
+            env!("CARGO_PKG_VERSION_PATCH"))
 }
 
 fn cleanup_json() {
-    fs::remove_dir_all("./data/json").unwrap();
+    fs::remove_dir_all("./data").unwrap();
 }
 
 fn visit_dirs<F>(dir: &Path, cb: &F) -> io::Result<()>
@@ -122,8 +122,9 @@ fn is_json(p: &Path) -> bool {
 }
 
 fn get_new_path(p: &Path) -> io::Result<PathBuf> {
+    let out_dir = env!("OUT_DIR");
     let p = match p.strip_prefix("data/json") {
-        Ok(_p) => Path::new("data/").join(_p).with_extension("json.bz2"),
+        Ok(_p) => Path::new(&out_dir).join(_p).with_extension("json.bz2"),
         Err(_) => p.to_path_buf()
     };
     if !p.exists() {
