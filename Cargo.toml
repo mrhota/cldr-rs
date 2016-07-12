@@ -1,5 +1,7 @@
 [package]
 name = "cldr"
+repository = "https://github.com/mrhota/cldr-rs"
+homepage = "https://github.com/mrhota/cldr-rs"
 version = "29.0.0-alpha"
 authors = ["A.J. Gardner <aaron.j.gardner@gmail.com>"]
 license = "Unlicense"
