@@ -1,11 +1,12 @@
 #![feature(custom_derive, plugin)]
 #![plugin(serde_macros)]
 
+use std::path::Path;
+
 extern crate serde;
 extern crate serde_json;
+extern crate bzip2;
 
-#[derive(Deserialize)]
-pub struct AvailableLocales {
-    pub modern: Vec<String>,
-    pub full: Vec<String>
-}
+pub mod util;
+pub mod core;
+pub mod error;
