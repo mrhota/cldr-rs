@@ -1,12 +1,30 @@
 #![allow(dead_code)]
 
 use std::collections::BTreeMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 extern crate serde;
 extern crate serde_json;
 
 pub mod aliases;
+
+enum Accessor {
+    AvailableLocales,
+    ScriptMetadata(String),
+}
+
+impl Accessor {
+    fn get(acc: Accessor) -> (PathBuf, String) {
+        match acc {
+            Accessor::AvailableLocales => {
+                (Path::new("core").join("availableLocales"), "availableLocales".to_owned())
+            },
+            Accessor::ScriptMetadata(script) => {
+                (Path::new("core").join("scriptMetadata"), format!("scriptMetadata.{}", script))
+            },
+        }
+    }
+}
 
 #[derive(Deserialize, Default)]
 pub struct AvailableLocales {
