@@ -1,10 +1,10 @@
-use std::io;
 use std::error;
 use std::fmt;
 use std::result;
 
-use bzip2::Error as BzipError;
 use serde_json::error::Error as JsonError;
+use bzip2::Error as BzipError;
+use std::io::Error as IoError;
 
 pub type Result<T> = result::Result<T, Error>;
 
@@ -15,15 +15,15 @@ pub enum Error {
     /// Some fatal bzip error occurred during decompression.
     Bzip(BzipError),
     /// An IO error occurred while handling a CLDR data request
-    Io(io::Error)
+    Io(IoError)
 }
 
 impl error::Error for Error {
     fn description(&self) -> &str {
         match *self {
-            Error::Json(ref error) => error::Error::description(error),
-            Error::Bzip(ref error) => error::Error::description(error),
-            Error::Io(ref error) => error::Error::description(error),
+            Error::Json(ref error) => error.description(),
+            Error::Bzip(ref error) => error.description(),
+            Error::Io(ref error) => error.description(),
         }
     }
 
@@ -54,6 +54,6 @@ impl From<BzipError> for Error {
     fn from(error: BzipError) -> Error { Error::Bzip(error) }
 }
 
-impl From<io::Error> for Error {
-    fn from(error: io::Error) -> Error { Error::Io(error) }
+impl From<IoError> for Error {
+    fn from(error: IoError) -> Error { Error::Io(error) }
 }
