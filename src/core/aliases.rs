@@ -21,9 +21,9 @@ impl Default for AliasReason {
 #[derive(Deserialize, Default)]
 pub struct Alias {
     #[serde(rename = "_reason")]
-    reason: AliasReason,
+    pub reason: AliasReason,
     #[serde(rename = "_replacement")]
-    replacement: String
+    pub replacement: String
 }
 
 pub type LanguageAlias = BTreeMap<String, Alias>;

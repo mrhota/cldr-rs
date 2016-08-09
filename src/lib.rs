@@ -5,6 +5,8 @@ extern crate serde;
 extern crate serde_json;
 extern crate bzip2;
 
-pub mod util;
+mod util;
+mod tests;
+
 pub mod core;
 pub mod error;

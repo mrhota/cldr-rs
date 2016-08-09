@@ -9,8 +9,8 @@ use serde::de::Deserialize;
 use serde_json;
 use bzip2::read::BzDecoder;
 
-fn read_cldr_data<T: Deserialize>(p: &path::Path, pointer: &str) -> Result<T> {
-    let f = try!(fs::File::open(p));
+pub fn read_cldr_data<P: AsRef<path::Path>, T: Deserialize>(path: P, pointer: &str) -> Result<T> {
+    let f = try!(fs::File::open(path));
     let mut decompressor = BzDecoder::new(f);
     let mut contents = String::new();
     try!(decompressor.read_to_string(&mut contents));

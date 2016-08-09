@@ -1,26 +1,33 @@
 #![allow(dead_code)]
 
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use error::Result;
+use util::read_cldr_data;
 
 extern crate serde;
 extern crate serde_json;
+use serde::de::Deserialize;
 
 pub mod aliases;
 
-enum Accessor {
+const OUT: &'static str = env!("OUT_DIR");
+
+pub enum Access {
     AvailableLocales,
     ScriptMetadata(String),
 }
 
-impl Accessor {
-    fn get(acc: Accessor) -> (PathBuf, String) {
-        match acc {
-            Accessor::AvailableLocales => {
-                (Path::new("core").join("availableLocales"), "availableLocales".to_owned())
+impl Access {
+    pub fn access<T: Deserialize>(&self) -> Result<T> {
+        match *self {
+            Access::AvailableLocales => {
+                read_cldr_data(Path::new(&OUT).join("core").join("availableLocales.json.bz2"),
+                               "/availableLocales")
             },
-            Accessor::ScriptMetadata(script) => {
-                (Path::new("core").join("scriptMetadata"), format!("scriptMetadata.{}", script))
+            Access::ScriptMetadata(ref script) => {
+                read_cldr_data(Path::new(&OUT).join("core").join("scriptMetadata.json.bz2"),
+                               &format!("/scriptMetadata/{}", script))
             },
         }
     }
@@ -28,43 +35,38 @@ impl Accessor {
 
 #[derive(Deserialize, Default)]
 pub struct AvailableLocales {
-    modern: Vec<String>,
-    full: Vec<String>
+    pub modern: Vec<String>,
+    pub full: Vec<String>
 }
 
 pub type DefaultContent = Vec<String>;
 
 #[derive(Deserialize, Default)]
-pub struct ScriptMetadata {
-    scripts: BTreeMap<String, _ScriptMetadata>
-}
-
-#[derive(Deserialize, Default)]
 pub struct _Version {
-    m_version_: i32
+    pub m_version_: i32
 }
 
 /// This metadata comes from the `common/properties/scriptMetadata.txt`
 /// file in a CLDR distribution; that is, it isn't part of the LDML files.
 #[derive(Deserialize, Default)]
-pub struct _ScriptMetadata {
-    rank: u16,
-    age: _Version,
+pub struct ScriptMetadata {
+    pub rank: u16,
+    pub age: _Version,
     #[serde(rename = "sampleChar")]
-    sample_char: char,
+    pub sample_char: char,
     #[serde(rename = "idUsage")]
-    id_usage: String,
-    rtl: String,
+    pub id_usage: String,
+    pub rtl: String,
     #[serde(rename = "lbLetters")]
-    lb_letters: String,
+    pub lb_letters: String,
     #[serde(rename = "hasCase")]
-    has_case: String,
+    pub has_case: String,
     #[serde(rename = "shapingReq")]
-    shaping_req: String,
-    ime: String,
-    density: i16,
+    pub shaping_req: String,
+    pub ime: String,
+    pub density: i16,
     #[serde(rename = "originCountry")]
-    origin_country: String,
+    pub origin_country: String,
     #[serde(rename = "likelyLanguage")]
-    likely_language: String
+    pub likely_language: String
 }
