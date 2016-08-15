@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use std::{fs, path};
 use std::io::Read;
 

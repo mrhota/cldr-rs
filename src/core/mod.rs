@@ -1,8 +1,7 @@
-#![allow(dead_code)]
-
-use std::collections::BTreeMap;
 use std::path::Path;
 use error::Result;
+use std::borrow::Cow;
+
 use util::read_cldr_data;
 
 extern crate serde;
@@ -13,21 +12,28 @@ pub mod aliases;
 
 const OUT: &'static str = env!("OUT_DIR");
 
-pub enum Access {
+/// Use these variants to request instances of various kinds of CLDR data.
+/// Variants with strings expect BCP 47-like language tags.
+pub enum Access<'a> {
     AvailableLocales,
-    ScriptMetadata(String),
+    ScriptMetadata(Cow<'a, str>),
+    DefaultContent,
 }
 
-impl Access {
+impl<'a> Access<'a> {
     pub fn access<T: Deserialize>(&self) -> Result<T> {
         match *self {
             Access::AvailableLocales => {
-                read_cldr_data(Path::new(&OUT).join("core").join("availableLocales.json.bz2"),
+                read_cldr_data(Path::new(OUT).join("core").join("availableLocales.json.bz2"),
                                "/availableLocales")
             },
             Access::ScriptMetadata(ref script) => {
-                read_cldr_data(Path::new(&OUT).join("core").join("scriptMetadata.json.bz2"),
+                read_cldr_data(Path::new(OUT).join("core").join("scriptMetadata.json.bz2"),
                                &format!("/scriptMetadata/{}", script))
+            },
+            Access::DefaultContent => {
+                read_cldr_data(Path::new(OUT).join("core").join("defaultContent.json.bz2"),
+                               "/defaultContent")
             },
         }
     }
@@ -46,8 +52,9 @@ pub struct _Version {
     pub m_version_: i32
 }
 
-/// This metadata comes from the `common/properties/scriptMetadata.txt`
-/// file in a CLDR distribution; that is, it isn't part of the LDML files.
+/// This metadata derives from the `common/properties/scriptMetadata.txt`
+/// file in a CLDR distribution. The LDML does not define or describe this
+/// data, but users might find it interesting or useful.
 #[derive(Deserialize, Default)]
 pub struct ScriptMetadata {
     pub rank: u16,
