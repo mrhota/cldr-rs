@@ -1,16 +1,5 @@
 # cldr-rs
-CLDR delivery and wrapper for Rust
-
-# Versioning
-
-Selecting a version, X.Y.Z, of this library will get you
-the latest X.Y._ of CLDR. I need the freedom to produce
-patch versions independent of CLDR's patches. This
-explains why the first version of `cldr-rs` was version
-29.0.0; to match the then-current version of CLDR.
-
-I guess I'm more or less using semver because it seems like
-people expect it, for better or worse.
+CLDR v32 delivery and wrapper for Rust
 
 # Caveats and Warnings
 
