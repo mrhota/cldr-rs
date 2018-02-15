@@ -1,6 +1,6 @@
 use std::path::Path;
 use std::path::PathBuf;
-use std::fs;
+use std::fs::{create_dir_all, remove_dir_all, DirEntry, File};
 use std::io;
 use std::result::Result;
 use std::env;
@@ -56,92 +56,89 @@ fn get_url_list() -> Vec<(String, &'static str)> {
     vec![
         (format!("{}-{}", URL_PREFIX, CORE), CORE),
         (format!("{}-{}-{}", URL_PREFIX, DATES, PACKAGE), DATES),
-        (format!("{}-{}-{}", URL_PREFIX, LOCALENAMES, PACKAGE), LOCALENAMES),
+        (
+            format!("{}-{}-{}", URL_PREFIX, LOCALENAMES, PACKAGE),
+            LOCALENAMES,
+        ),
         (format!("{}-{}-{}", URL_PREFIX, MISC, PACKAGE), MISC),
         (format!("{}-{}-{}", URL_PREFIX, NUMBERS, PACKAGE), NUMBERS),
         (format!("{}-{}", URL_PREFIX, RBNF), RBNF),
         (format!("{}-{}-{}", URL_PREFIX, SEGMENTS, PACKAGE), SEGMENTS),
-        (format!("{}-{}-{}", URL_PREFIX, UNITS, PACKAGE), UNITS)
+        (format!("{}-{}-{}", URL_PREFIX, UNITS, PACKAGE), UNITS),
     ]
 }
 
 fn clone_repos() -> Result<(), GitError> {
     let json_path = Path::new("data/json");
-    let tag = tag_name();
+    let tag = "refs/tags/32.0.0";
     for (url, dir) in get_url_list() {
         if json_path.join(dir).exists() {
             continue;
         }
-        let repo = try!(Repository::clone(url.as_ref(), json_path.join(dir)));
-        let ref_id = try!(repo.refname_to_id(tag.as_str()));
-        try!(repo.set_head_detached(ref_id));
+        let repo = Repository::clone(url.as_ref(), json_path.join(dir))?;
+        let ref_id = repo.refname_to_id(tag)?;
+        repo.set_head_detached(ref_id)?;
     }
     Ok(())
 }
 
-fn tag_name() -> String {
-    format!("refs/tags/{}.{}.{}",
-            env!("CARGO_PKG_VERSION_MAJOR"),
-            env!("CARGO_PKG_VERSION_MINOR"),
-            env!("CARGO_PKG_VERSION_PATCH"))
-}
-
 fn cleanup_json() {
-    fs::remove_dir_all("./data").unwrap();
+    remove_dir_all("./data").unwrap();
 }
 
 fn visit_dirs<F>(dir: &Path, cb: &F) -> io::Result<()>
-    where F : Fn(&fs::DirEntry) -> io::Result<()> {
-
+where
+    F: Fn(&DirEntry) -> io::Result<()>,
+{
     if dir.is_dir() {
-        for entry in try!(dir.read_dir()) {
-            let entry = try!(entry);
+        for entry in dir.read_dir()? {
+            let entry = entry?;
             if entry.path().is_dir() {
-                try!(visit_dirs(&entry.path(), cb));
+                visit_dirs(&entry.path(), cb)?;
             } else {
-                try!(cb(&entry));
+                cb(&entry)?;
             }
         }
     }
     Ok(())
 }
 
-fn json_compressor(entry: &fs::DirEntry) -> io::Result<()> {
+fn json_compressor(entry: &DirEntry) -> io::Result<()> {
     let entry_name = &entry.file_name();
     if is_json(&entry.path()) && !("bower.json" == entry_name || "package.json" == entry_name) {
-        try!(compress(&entry.path()));
+        compress(&entry.path())?;
     }
     Ok(())
 }
 
 fn is_json(p: &Path) -> bool {
     if let Some(ex) = p.extension() {
-        return ex == "json"
+        return ex == "json";
     }
     false
 }
 
 fn get_new_path(p: &Path) -> io::Result<PathBuf> {
-    let out_dir = env!("OUT_DIR");
+    let out_dir = env::var("OUT_DIR").unwrap();
     let p = match p.strip_prefix("data/json") {
         Ok(_p) => Path::new(&out_dir).join(_p).with_extension("json.bz2"),
-        Err(_) => p.to_path_buf()
+        Err(_) => p.to_path_buf(),
     };
     if !p.exists() {
-        try!(fs::create_dir_all(p.parent().unwrap()));
+        create_dir_all(p.parent().unwrap())?;
     }
     Ok(p)
 }
 
 fn compress(p: &Path) -> io::Result<()> {
-    let new_path = try!(get_new_path(p));
+    let new_path = get_new_path(p)?;
     if new_path.exists() {
-        return Ok(())
+        return Ok(());
     }
-    let mut old_file = try!(fs::File::open(&p));
-    let new_file = try!(fs::File::create(&new_path));
+    let mut old_file = File::open(&p)?;
+    let new_file = File::create(&new_path)?;
     let mut zipper = BzEncoder::new(new_file, Compression::Best);
-    try!(io::copy(&mut old_file, &mut zipper));
+    io::copy(&mut old_file, &mut zipper)?;
     Ok(())
 }
 

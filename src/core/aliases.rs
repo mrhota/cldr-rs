@@ -11,11 +11,13 @@ pub enum AliasReason {
     #[serde(rename = "legacy")]
     Legacy,
     #[serde(rename = "bibliographic")]
-    Bibliographic
+    Bibliographic,
 }
 
 impl Default for AliasReason {
-    fn default() -> Self { AliasReason::Deprecated }
+    fn default() -> Self {
+        AliasReason::Deprecated
+    }
 }
 
 #[derive(Deserialize, Default)]
@@ -23,7 +25,7 @@ pub struct Alias {
     #[serde(rename = "_reason")]
     pub reason: AliasReason,
     #[serde(rename = "_replacement")]
-    pub replacement: String
+    pub replacement: String,
 }
 
 pub type LanguageAlias = BTreeMap<String, Alias>;

@@ -15,7 +15,7 @@ pub enum Error {
     /// Some fatal bzip error occurred during decompression.
     Bzip(BzipError),
     /// An IO error occurred while handling a CLDR data request
-    Io(IoError)
+    Io(IoError),
 }
 
 impl error::Error for Error {
@@ -47,13 +47,19 @@ impl fmt::Display for Error {
 }
 
 impl From<JsonError> for Error {
-    fn from(error: JsonError) -> Error { Error::Json(error) }
+    fn from(error: JsonError) -> Error {
+        Error::Json(error)
+    }
 }
 
 impl From<BzipError> for Error {
-    fn from(error: BzipError) -> Error { Error::Bzip(error) }
+    fn from(error: BzipError) -> Error {
+        Error::Bzip(error)
+    }
 }
 
 impl From<IoError> for Error {
-    fn from(error: IoError) -> Error { Error::Io(error) }
+    fn from(error: IoError) -> Error {
+        Error::Io(error)
+    }
 }
