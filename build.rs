@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::path::PathBuf;
 use std::fs::{create_dir_all, remove_dir_all, DirEntry, File};
-use std::io;
+use std::io::{self, Read};
 use std::result::Result;
 use std::env;
 use std::process;
@@ -13,6 +13,26 @@ use git2::Error as GitError;
 extern crate bzip2;
 use bzip2::write::BzEncoder;
 use bzip2::Compression;
+
+#[macro_use]
+extern crate serde_derive;
+extern crate toml;
+
+#[derive(Deserialize)]
+struct CargoConfig {
+    package: Package
+}
+
+#[derive(Deserialize)]
+struct Package {
+    metadata: Metadata
+}
+
+#[derive(Deserialize)]
+struct Metadata {
+    #[serde(rename = "cldr-version")]
+    cldr_version: String
+}
 
 // For more information on the structure of the repos defined here, see
 // https://github.com/unicode-cldr/cldr-json#package-organization
@@ -33,7 +53,7 @@ const RBNF: &'static str = "rbnf";
 
 // These packages have the full/modern split.
 const DATES: &'static str = "dates";
-const LOCALENAMES: &'static str = "localenames";
+const LOCALE_NAMES: &'static str = "localenames";
 const MISC: &'static str = "misc";
 const NUMBERS: &'static str = "numbers";
 const SEGMENTS: &'static str = "segments";
@@ -56,10 +76,7 @@ fn get_url_list() -> Vec<(String, &'static str)> {
     vec![
         (format!("{}-{}", URL_PREFIX, CORE), CORE),
         (format!("{}-{}-{}", URL_PREFIX, DATES, PACKAGE), DATES),
-        (
-            format!("{}-{}-{}", URL_PREFIX, LOCALENAMES, PACKAGE),
-            LOCALENAMES,
-        ),
+        (format!("{}-{}-{}", URL_PREFIX, LOCALE_NAMES, PACKAGE), LOCALE_NAMES),
         (format!("{}-{}-{}", URL_PREFIX, MISC, PACKAGE), MISC),
         (format!("{}-{}-{}", URL_PREFIX, NUMBERS, PACKAGE), NUMBERS),
         (format!("{}-{}", URL_PREFIX, RBNF), RBNF),
@@ -70,16 +87,25 @@ fn get_url_list() -> Vec<(String, &'static str)> {
 
 fn clone_repos() -> Result<(), GitError> {
     let json_path = Path::new("data/json");
-    let tag = "refs/tags/32.0.0";
+    let tag = tag_name();
     for (url, dir) in get_url_list() {
         if json_path.join(dir).exists() {
             continue;
         }
         let repo = Repository::clone(url.as_ref(), json_path.join(dir))?;
-        let ref_id = repo.refname_to_id(tag)?;
+        let ref_id = repo.refname_to_id(&tag)?;
         repo.set_head_detached(ref_id)?;
     }
     Ok(())
+}
+
+fn tag_name() -> String {
+    let cargo_file = Path::new("Cargo.toml");
+    let mut file = File::open(cargo_file).expect("couldn't open Cargo.toml");
+    let mut s = String::new();
+    file.read_to_string(&mut s).expect("Couldn't read Cargo.toml");
+    let config: CargoConfig = toml::from_str(&s).expect("Couldn't deserialize Cargo.toml");
+    format!("refs/tags/{}", config.package.metadata.cldr_version)
 }
 
 fn cleanup_json() {
